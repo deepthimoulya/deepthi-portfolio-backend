@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -9,6 +9,7 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
+ADMIN_KEY = os.getenv("ADMIN_KEY", "deepthi-secret")
 
 # ── APP ──
 app = FastAPI(
@@ -112,11 +113,16 @@ async def add_review(review: ReviewIn):
 
 
 @app.delete("/reviews/{review_id}")
-async def delete_review(review_id: str):
-    """Delete a review by ID (admin only)."""
+async def delete_review(review_id: str, x_admin_key: str = Header(None)):
+
+    if x_admin_key != ADMIN_KEY:
+        raise HTTPException(status_code=403, detail="Not allowed")
+
     result = await reviews_col.delete_one({"_id": ObjectId(review_id)})
+
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Review not found")
+
     return {"message": "Review deleted 🤍"}
 
 
